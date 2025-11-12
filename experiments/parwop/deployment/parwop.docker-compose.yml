@@ -1,0 +1,70 @@
+version: '2.4'
+services:
+  parwop-coordinator:
+    container_name: parwop-coordinator
+    hostname: parwop-coordinator
+    network_mode: "host"
+    image: parwop:0.1
+    build:
+      context: ../../../
+      dockerfile: Dockerfile
+    security_opt:
+      - seccomp:unconfined
+    mem_limit: ${MEMORY_LIMIT}
+    cpus: ${CPU_COUNT}
+    environment:
+      NODE_ID: coordinator
+      IS_COORDINATOR: "True"
+      COORDINATOR_ADDRESS: http://node6.bdcl:8000
+      RABBITMQ_HOST: node6.bdcl
+      RABBITMQ_PORT: "5672"
+      MAX_CPU: ${CPU_COUNT}
+    volumes:
+      - /mnt/nfs/parwop:/code:ro
+    #ports:
+    #  - "8000:8000"
+    user: root
+    command: [
+       "bash", "-c",
+       "cd /code && python -u -m uvicorn parwop.server.main:app --port=8000 --host=0.0.0.0"
+    ]
+
+  parwop-worker:
+    container_name: parwop-worker
+    image: parwop:0.1
+    network_mode: "host"
+    build:
+      context: ../../../
+      dockerfile: Dockerfile
+    security_opt:
+      - seccomp:unconfined
+    mem_limit: ${MEMORY_LIMIT}
+    cpus: ${CPU_COUNT}
+    environment:
+      NODE_ID: ${PARWOP_NODE_ID}
+      IS_WORKER: "True"
+      COORDINATOR_ADDRESS: http://node6.bdcl:8000
+      WORKER_ADDRESS: ${PARWOP_WORKER_ADDRESS}
+      WORKER_EXTERNAL_ADDRESS: ${PARWOP_WORKER_ADDRESS}
+    volumes:
+      - /mnt/nfs/parwop:/code:ro
+      - /data/hdd/experiments-parwop/parwop/data:/data:ro
+    #ports:
+    #  - "8001:8001"
+    user: root
+    command: [
+      "bash", "-c",
+      "cd /code && python -u -m uvicorn parwop.server.main:app --port=8001 --host=0.0.0.0"
+    ]
+
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    hostname: rabbitmq
+    container_name: parwop-rabbitmq
+#    restart: always
+#    environment:
+#      - RABBITMQ_DEFAULT_USER=rmuser
+#      - RABBITMQ_DEFAULT_PASS=rmpassword
+    ports:
+      - "5672:5672"
+      - "15672:15672"

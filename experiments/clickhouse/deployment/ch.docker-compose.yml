@@ -1,0 +1,33 @@
+version: '2.4'
+services:
+  clickhouse-server:
+    container_name: clickhouse-server
+    network_mode: host
+    mem_limit: ${MEMORY_LIMIT}
+    cpus: ${CPU_COUNT}
+    environment:
+      MEMORY_LIMIT: ${MEMORY_LIMIT}
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    image: clickhouse/clickhouse-server:24.8.12.28
+    volumes:
+      - /data/hdd/experiments-parwop/clickhouse/data:/var/lib/clickhouse:z
+      - /mnt/nfs/parwop/experiments/clickhouse/deployment/config.xml:/etc/clickhouse-server/config.xml:ro
+      - /mnt/nfs/parwop/experiments/clickhouse/deployment/users.xml:/etc/clickhouse-server/users.xml:ro
+      - /mnt/nfs/parwop/experiments/clickhouse/deployment/users.xml:/etc/clickhouse-server/users.d/default-user.xml:ro
+      - /mnt/nfs/parwop:/mnt/nfs/parwop:z
+    user: root
+
+  # sudo docker compose -f ch.docker-compose.yml --env-file=/mnt/nfs/parwop/experiments/32_2.env up -d --build clickhouse-client-container
+  # sudo docker container exec -it clickhouse-client-container bash
+  clickhouse-client-container:
+    container_name: clickhouse-client-container
+    build:
+      context: .
+      dockerfile: python-client.dockerfile
+    command: [ "bash", "-c", "while true; do sleep 5; done" ]
+    volumes:
+      - /mnt/nfs/parwop:/mnt/nfs/parwop:z
+    user: root
